@@ -6,10 +6,12 @@ export class PocDatabase extends Construct{
 
     public readonly productTable: ITable;
     public readonly roleTable:ITable;
+    public prefix:string;
 
 
-    constructor(scope: Construct, id: string){
+    constructor(scope: Construct, id: string,dept:string, proj:string,env:string){
         super(scope,id)
+        this.prefix = `${dept}-${proj}-${env}`;
         this.productTable = this.createProductTable()
         this.roleTable = this.createRoleTable()
         
@@ -17,11 +19,11 @@ export class PocDatabase extends Construct{
     }
 
     private createRoleTable() : ITable{
-      return this.createTable('role','id')
+      return this.createTable(`${this.prefix}-role`,'id')
 }
 
     private createProductTable() : ITable{
-            return this.createTable('product','id')
+            return this.createTable(`${this.prefix}-product`,'id')
     }
 
     private createTable(name:string, id:string, sortKey?:string) : ITable{

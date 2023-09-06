@@ -1,3 +1,4 @@
+import { StackProps } from './aws-microservices-stack';
 import { ITable } from "aws-cdk-lib/aws-dynamodb";
 import { Runtime, Tracing } from "aws-cdk-lib/aws-lambda";
 import { NodejsFunction, NodejsFunctionProps } from "aws-cdk-lib/aws-lambda-nodejs";
@@ -24,12 +25,14 @@ export class Services extends Construct{
     public readonly productMicroservice: NodejsFunction;
     public readonly subscribeMicroservice: NodejsFunction;
     public readonly roleMicroservice: NodejsFunction;
+    public prefix:string;
 
-    constructor(scope:Construct, id:string, props: PocServiceProps,datadog:Datadog){
+    constructor(scope:Construct, id:string, props: PocServiceProps,datadog:Datadog,sProps:StackProps){
         super(scope,id)
-        this.productMicroservice = this.createProductFunction(props.productTable)
-        this.subscribeMicroservice = this.createSubscribeFunction(props.productTable)
-        this.roleMicroservice = this.createRoleFunction(props.roleTable);
+        this.prefix = `${sProps.dept}-${sProps.project}-${sProps.env}`
+        this.productMicroservice = this.createProductFunction(props.productTable,sProps)
+        this.subscribeMicroservice = this.createSubscribeFunction(props.productTable,sProps)
+        this.roleMicroservice = this.createRoleFunction(props.roleTable,sProps);
 
         datadog.addLambdaFunctions([this.productMicroservice,this.subscribeMicroservice]);
   
@@ -37,7 +40,7 @@ export class Services extends Construct{
     }
 
 
-    private createRoleFunction(roleTable: ITable) : NodejsFunction {
+    private createRoleFunction(roleTable: ITable,sProps:StackProps) : NodejsFunction {
       const nodeJsFunctionProps: NodejsFunctionProps = {
         bundling: {
           externalModules: [
@@ -49,7 +52,10 @@ export class Services extends Construct{
           DYNAMODB_TABLE: roleTable.tableName
         },
         runtime: Runtime.NODEJS_14_X,
-        tracing: Tracing.ACTIVE
+        tracing: Tracing.ACTIVE,
+        functionName:`${this.prefix}-role-svc`,
+        role: sProps.role
+        
       }
   
       // Product microservices lambda function
@@ -65,7 +71,7 @@ export class Services extends Construct{
     
 
 
-    private createProductFunction(productTable: ITable) : NodejsFunction {
+    private createProductFunction(productTable: ITable,sProps:StackProps) : NodejsFunction {
         const nodeJsFunctionProps: NodejsFunctionProps = {
           bundling: {
             externalModules: [
@@ -77,7 +83,9 @@ export class Services extends Construct{
             DYNAMODB_TABLE: productTable.tableName
           },
           runtime: Runtime.NODEJS_14_X,
-          tracing: Tracing.ACTIVE
+          tracing: Tracing.ACTIVE,
+          functionName:`${this.prefix}-product-svc`,
+          role: sProps.role
         }
     
         // Product microservices lambda function
@@ -91,7 +99,7 @@ export class Services extends Construct{
         return productFunction;
       }
 
-      private createSubscribeFunction(productTable: ITable) : NodejsFunction {
+      private createSubscribeFunction(productTable: ITable,sProps:StackProps) : NodejsFunction {
         const nodeJsFunctionProps: NodejsFunctionProps = {
           bundling: {
             externalModules: [
@@ -103,7 +111,9 @@ export class Services extends Construct{
             DYNAMODB_TABLE: productTable.tableName
           },
           runtime: Runtime.NODEJS_14_X,
-          tracing: Tracing.ACTIVE
+          tracing: Tracing.ACTIVE,
+          functionName:`${this.prefix}-subcsriber-svc`,
+          role: sProps.role
         }
     
         // Product microservices lambda function

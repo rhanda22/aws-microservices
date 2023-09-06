@@ -15,11 +15,22 @@ import { Api } from './api';
 import { PocEventBus } from './eventbus';
 import { Datadog } from "datadog-cdk-constructs-v2";
 import { StateMachineTarget } from './state-machine';
+import * as iam from 'aws-cdk-lib/aws-iam';
 // import * as sqs from 'aws-cdk-lib/aws-sqs';
+
+
+export interface StackProps{
+  dept: string,
+  project: string,
+  env: string,
+  role?:iam.IRole
+
+}
+
 
 export class AwsMicroservicesStack extends cdk.Stack {
 
-  constructor(scope: Construct, id: string, props?: cdk.StackProps) {
+  constructor(scope: Construct, id: string,sprops:StackProps,props?: cdk.StackProps) {
     super(scope, id, props);
 
     const datadog = new Datadog(this, "Datadog", {
@@ -30,9 +41,20 @@ export class AwsMicroservicesStack extends cdk.Stack {
       service:"poc"
     });
 
-    const database = new PocDatabase(this,'pocDatabase');
+    const serviceRole = iam.Role.fromRoleArn(
+      this,
+      'imported-role',
+      `arn:aws:iam::${cdk.Stack.of(this).account}:role/lambdadynamo`,
+      {mutable: false},
+    );
 
-    const services = new Services(this,'pocServices',{productTable:database.productTable,roleTable:database.roleTable},datadog)
+    console.log('importedRole 👉', serviceRole.roleName);
+
+    sprops.role = serviceRole;
+
+    const database = new PocDatabase(this,'pocDatabase',sprops.dept,sprops.project,sprops.env);
+
+    const services = new Services(this,'pocServices',{productTable:database.productTable,roleTable:database.roleTable},datadog,sprops)
     
     const pocApi = new Api(this,'pocApi',{productService:services.productMicroservice,roleService:services.roleMicroservice})
 
